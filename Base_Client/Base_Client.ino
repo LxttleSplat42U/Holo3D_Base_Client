@@ -155,15 +155,17 @@ void LED_Blink(){
 void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
   switch(type) {
     case WStype_DISCONNECTED:
-      Serial.println("WebSocket Disconnected");
-      Client_Connected = false;
+      Serial.println("WebSocket Disconnected");      
       setFanSpeed(0); //Switch off fan immediately if disconnected!
+      Client_Connected = false;
       break;
       
     case WStype_CONNECTED:
       Serial.printf("WebSocket Connected to: %s\n", payload);
       Client_Connected = true;
-      webSocket.sendTXT("ESP32 Fan Controller Connected");
+      // Send initial to register as client with a unique ID      
+      webSocket.sendTXT("REGISTER:" + String(FAN_ID));   
+      Serial.println("Sent registration message: " + String(FAN_ID));      
       break;
       
     case WStype_TEXT:
@@ -172,7 +174,9 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
         
         // Process incoming data
         String msg = String((char*)payload);
-        
+        if (msg == "-1"){ //Shutdown command
+          setFanSpeed(0);
+        }
         if (msg.startsWith("MOTOR_SPEED:") ){
           String msgValue = msg.substring(strlen("MOTOR_SPEED:"));
           msgSpeed = msgValue.toInt(); //0 - 255
